@@ -1,0 +1,29 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# Install system dependencies (Rasterio/GDAL needs some system libs)
+RUN apt-get update && apt-get install -y \
+    gdal-bin \
+    libgdal-dev \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install fastapi uvicorn google-genai
+
+# Copy backend application
+COPY backend /app/backend
+COPY data /app/data
+COPY config.py /app/backend/app/config.py
+
+# Expose FastAPI port
+EXPOSE 8000
+
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

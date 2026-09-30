@@ -1,0 +1,54 @@
+steps:
+  # 1. Build Backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cyclone-backend', '-f', 'Dockerfile.backend', '.']
+    
+  # 2. Push Backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cyclone-backend']
+
+  # 3. Deploy Backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'cyclone-backend'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cyclone-backend'
+      - '--region'
+      - '${_REGION}'
+      - '--port'
+      - '8080' # Changed to 8080 for Cloud Run standard
+      - '--max-instances'
+      - '2'
+      - '--allow-unauthenticated'
+
+  # 4. Build Frontend (with backend URL injected, if needed, though instruction says relative path)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cyclone-frontend', '-f', 'Dockerfile.frontend', '.']
+    
+  # 5. Push Frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cyclone-frontend']
+
+  # 6. Deploy Frontend
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'cyclone-frontend'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cyclone-frontend'
+      - '--region'
+      - '${_REGION}'
+      - '--port'
+      - '3000'
+      - '--max-instances'
+      - '2'
+      - '--allow-unauthenticated'
+
+substitutions:
+  _REGION: us-central1
+  _REPO: cyclone-repo

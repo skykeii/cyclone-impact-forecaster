@@ -1,0 +1,25 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy Next.js frontend package files
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy Next.js source and build
+COPY frontend .
+RUN npm run build
+
+# Production image
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=https://cyclone-backend-service-url.run.app
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+CMD ["node", "server.js"]
