@@ -52,7 +52,7 @@ def startup():
 
 # ── Events ─────────────────────────────────────────────────────────────
 
-@app.get("/events", response_model=list[EventOut])
+@app.get("/api/events", response_model=list[EventOut])
 def list_events():
     conn = get_connection()
     rows = conn.execute("SELECT * FROM events").fetchall()
@@ -60,7 +60,7 @@ def list_events():
     return [dict(r) for r in rows]
 
 
-@app.get("/events/{event_id}", response_model=EventOut)
+@app.get("/api/events/{event_id}", response_model=EventOut)
 def get_event(event_id: str):
     conn = get_connection()
     row = conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
@@ -72,7 +72,7 @@ def get_event(event_id: str):
 
 # ── Track ──────────────────────────────────────────────────────────────
 
-@app.get("/events/{event_id}/track")
+@app.get("/api/events/{event_id}/track")
 def get_track(event_id: str):
     """Return track as GeoJSON FeatureCollection."""
     conn = get_connection()
@@ -110,7 +110,7 @@ def get_track(event_id: str):
 
 # ── Hazard raster (as GeoJSON vectorised) ─────────────────────────────
 
-@app.get("/events/{event_id}/hazard")
+@app.get("/api/events/{event_id}/hazard")
 def get_hazard(event_id: str):
     """Return predicted hazard zones as GeoJSON."""
     path = DATA_DIR / f"{event_id}_hazard.geojson"
@@ -121,7 +121,7 @@ def get_hazard(event_id: str):
 
 # ── Observed flood ────────────────────────────────────────────────────
 
-@app.get("/events/{event_id}/observed")
+@app.get("/api/events/{event_id}/observed")
 def get_observed(event_id: str):
     """Return observed Sentinel-1 flood mask as GeoJSON."""
     path = DATA_DIR / f"{event_id}_flood_observed.geojson"
@@ -132,7 +132,7 @@ def get_observed(event_id: str):
 
 # ── Exposure ──────────────────────────────────────────────────────────
 
-@app.get("/events/{event_id}/exposure")
+@app.get("/api/events/{event_id}/exposure")
 def get_exposure(event_id: str, district: Optional[str] = Query(None)):
     """Return exposed assets as GeoJSON."""
     conn = get_connection()
@@ -174,7 +174,7 @@ def get_exposure(event_id: str, district: Optional[str] = Query(None)):
 
 # ── Metrics ───────────────────────────────────────────────────────────
 
-@app.get("/events/{event_id}/metrics", response_model=list[MetricsOut])
+@app.get("/api/events/{event_id}/metrics", response_model=list[MetricsOut])
 def get_metrics(event_id: str):
     conn = get_connection()
     rows = conn.execute(
@@ -193,7 +193,7 @@ class AdvisoryRequest(BaseModel):
     lang: str = "en"
 
 
-@app.post("/advisory", response_model=AdvisoryOut)
+@app.post("/api/advisory", response_model=AdvisoryOut)
 async def generate_advisory(req: AdvisoryRequest):
     """Generate or retrieve a Gemini advisory for a district."""
     conn = get_connection()
@@ -236,7 +236,7 @@ class AskRequest(BaseModel):
     question: str
 
 
-@app.post("/ask", response_model=AskResponse)
+@app.post("/api/ask", response_model=AskResponse)
 async def ask_question_endpoint(req: AskRequest):
     """Answer natural-language questions strictly from the database."""
     from pipeline.step08_advisory import answer_question
@@ -246,7 +246,7 @@ async def ask_question_endpoint(req: AskRequest):
 
 # ── Health ────────────────────────────────────────────────────────────
 
-@app.get("/health")
+@app.get("/api/health")
 def health():
     return {"status": "ok", "db": str(DB_PATH)}
 

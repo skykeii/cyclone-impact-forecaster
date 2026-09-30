@@ -32,4 +32,4 @@ EXPOSE 8080
 
 # In main.py, FastAPI will need a Mount for the static files, but since I can't guarantee that's edited, 
 # I will supply a wrapper script or edit main.py to mount the static folder.
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8080}

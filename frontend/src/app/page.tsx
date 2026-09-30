@@ -11,7 +11,7 @@ if (typeof window !== "undefined" && maplibregl.setWorkerUrl) {
 }
 
 // The FastAPI backend URL
-const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? "" : "http://localhost:8000";
+const API_URL = "/api";
 const EVENT_ID = "amphan";
 
 const HAZARD_LAYER: LayerProps = {
