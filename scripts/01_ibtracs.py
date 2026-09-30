@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS advisories (
 """
 
 
-def write_sqlite(df: pd.DataFrame, landfall_ts: str):
+def write_sqlite(df: pd.DataFrame, landfall_ts: str, event_id: str):
     conn = sqlite3.connect(str(DB_PATH))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -281,7 +281,7 @@ def write_sqlite(df: pd.DataFrame, landfall_ts: str):
     )
 
     # Clear old track points then insert
-    conn.execute("DELETE FROM track_points WHERE event_id = args.event")
+    conn.execute("DELETE FROM track_points WHERE event_id = 'amphan' if args.event == 'amphan' else 'remal'")
     rows = []
     for _, r in df.iterrows():
         rows.append((
@@ -298,7 +298,7 @@ def write_sqlite(df: pd.DataFrame, landfall_ts: str):
     )
 
     conn.commit()
-    count = conn.execute("SELECT COUNT(*) FROM track_points WHERE event_id=event_id").fetchone()[0]
+    count = conn.execute("SELECT COUNT(*) FROM track_points WHERE event_id=?", (event_id,)).fetchone()[0]
     print(f"[SQLITE]   {DB_PATH}")
     print(f"           events: 1 row  |  track_points: {count} rows")
     conn.close()
@@ -309,7 +309,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--event', required=True, choices=['amphan', 'remal'])
     args = parser.parse_args()
-    event_id = args.event
+    event_id = 'amphan' if args.event == 'amphan' else 'remal'
     print("\n" + "=" * 60)
     print("  STEP 01 — IBTrACS LOADER  ({event_id.capitalize()}, 2020)")
     print("=" * 60 + "\n")
@@ -326,7 +326,7 @@ def main():
 
     print_track(df, landfall_ts)
     write_geojson(df, landfall_ts, DATA_DIR / f"{event_id}_track.geojson")
-    write_sqlite(df, landfall_ts)
+    write_sqlite(df, landfall_ts, event_id)
 
     # Summary
     peak = df.loc[df["wind_kt"].idxmax()]

@@ -41,6 +41,13 @@ elif os.path.exists(Path(__file__).resolve().parent.parent.parent / "frontend" /
 @app.on_event("startup")
 def startup():
     init_db()
+    try:
+        conn = get_connection()
+        conn.execute("DELETE FROM advisories WHERE json_content LIKE '%Fallback summary due to API error%'")
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 
 # ── Events ─────────────────────────────────────────────────────────────
@@ -197,14 +204,16 @@ async def generate_advisory(req: AdvisoryRequest):
     ).fetchone()
 
     if row:
-        conn.close()
-        return AdvisoryOut(
-            district_id=row["district_id"],
-            event_id=row["event_id"],
-            lang=row["lang"],
-            content=json.loads(row["json_content"]),
-            verified=bool(row["verified"]),
-        )
+        content = json.loads(row["json_content"])
+        if "Fallback summary due to API error" not in content.get("threat_summary", ""):
+            conn.close()
+            return AdvisoryOut(
+                district_id=row["district_id"],
+                event_id=row["event_id"],
+                lang=row["lang"],
+                content=content,
+                verified=bool(row["verified"]),
+            )
 
     # Generate new advisory (import here to avoid circular / heavy imports)
     from pipeline.step08_advisory import generate_advisory_for_district

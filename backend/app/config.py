@@ -1,12 +1,24 @@
 """Configuration constants and paths."""
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # ── Paths ──────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BACKEND_DIR.parent
 CACHE_DIR = PROJECT_ROOT / "cache"
 DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = PROJECT_ROOT / "data" / "forecaster.db"
+
+# ── Load environment variables ─────────────────────────────────────────
+load_dotenv(BACKEND_DIR / ".env", override=True)
+load_dotenv(PROJECT_ROOT / ".env", override=True)
+load_dotenv(override=True)
+
+if os.environ.get("GEMINI_API_KEY"):
+    os.environ["GEMINI_API_KEY"] = os.environ["GEMINI_API_KEY"].strip()
+    if not os.environ.get("GOOGLE_API_KEY"):
+        os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
 
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)

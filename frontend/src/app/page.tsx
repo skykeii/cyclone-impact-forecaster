@@ -2,8 +2,13 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Map, { Source, Layer, LayerProps } from "react-map-gl/maplibre";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Info, Map as MapIcon, ShieldAlert, BarChart3, ChevronDown, CheckCircle, AlertTriangle } from "lucide-react";
+
+if (typeof window !== "undefined" && maplibregl.setWorkerUrl) {
+  maplibregl.setWorkerUrl("/maplibre-gl-worker.mjs");
+}
 
 // The FastAPI backend URL
 const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? "" : "http://localhost:8000";
@@ -139,24 +144,22 @@ export default function ForecasterApp() {
               onClick={() => setShowObserved(!showObserved)}
               className={`w-full py-2.5 px-4 rounded-md font-medium text-sm transition-all duration-300 ${
                 showObserved 
-                  ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]" 
-                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
+                  : "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600"
               }`}
             >
-              {showObserved ? "Hide Observed Flooding" : "Reveal What Actually Happened"}
+              {showObserved ? "Hide Satellite Flood Layer" : "Reveal Satellite Flood Layer"}
             </button>
           </div>
 
-          {/* METRICS PANEL */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart3 size={16} className="text-slate-400" />
-              <h3 className="font-semibold text-sm">Validation Metrics</h3>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
+          {/* ACCURACY METRICS */}
+          <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <BarChart3 size={16} className="text-slate-400" /> Validation Metrics
+            </h3>
+            <div className="grid grid-cols-2 gap-3 mb-2">
               <div className="bg-slate-900 rounded p-3 border border-slate-800">
-                <div className="text-xs text-slate-500 mb-1">Hazard Model IoU</div>
+                <div className="text-xs text-slate-500 mb-1">Pixel IoU (Pre vs Obs)</div>
                 <div className="text-lg font-bold text-emerald-400">
                   {pixelMetrics.iou ? pixelMetrics.iou.toFixed(4) : "—"}
                 </div>
@@ -198,35 +201,31 @@ export default function ForecasterApp() {
 
             {loadingAdvisory ? (
               <div className="p-4 bg-slate-900/50 rounded-md border border-slate-800 text-sm text-slate-400 animate-pulse">
-                Generating Gemini AI Advisory...
+                Synthesizing hazard data & cross-checking facts...
               </div>
             ) : advisory?.content ? (
-              <div className="bg-slate-900/80 rounded-md border border-slate-700 overflow-hidden">
-                <div className={`p-2 px-3 text-xs font-bold uppercase tracking-wider flex justify-between items-center ${
-                  advisory.content.threat_level === "Extreme" ? "bg-red-900/80 text-red-200" :
-                  advisory.content.threat_level === "High" ? "bg-orange-800/80 text-orange-200" :
-                  "bg-yellow-800/80 text-yellow-200"
-                }`}>
-                  <span>{advisory.content.threat_level} THREAT</span>
-                  {advisory.verified ? (
-                    <span className="flex items-center gap-1 text-[10px] bg-black/30 px-1.5 py-0.5 rounded">
-                      <CheckCircle size={10} /> Fact Checked
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-[10px] bg-black/30 px-1.5 py-0.5 rounded text-red-300">
-                      <AlertTriangle size={10} /> Unverified
+              <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-900/30">
+                <div className="bg-amber-600/30 border-b border-amber-600/40 p-3 flex justify-between items-center">
+                  <span className="font-bold text-xs uppercase tracking-wider text-amber-300">
+                    {advisory.content.threat_level || "MODERATE"} THREAT
+                  </span>
+                  {advisory.verified && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
+                      <CheckCircle size={10} /> FACT CHECKED
                     </span>
                   )}
                 </div>
-                <div className="p-3 text-sm space-y-3">
-                  <p className="text-slate-300 leading-relaxed">{advisory.content.threat_summary}</p>
+                <div className="p-4 space-y-4">
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                    {advisory.content.threat_summary}
+                  </p>
                   
                   {advisory.content.critical_actions?.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase mb-1.5">Critical Actions</h4>
-                      <ul className="list-disc pl-4 text-slate-300 space-y-1 text-xs">
-                        {advisory.content.critical_actions.map((action: string, i: number) => (
-                          <li key={i}>{action}</li>
+                      <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Critical Actions</h4>
+                      <ul className="text-xs space-y-1 text-slate-300 list-disc list-inside">
+                        {advisory.content.critical_actions.map((act: string, i: number) => (
+                          <li key={i}>{act}</li>
                         ))}
                       </ul>
                     </div>
@@ -234,7 +233,7 @@ export default function ForecasterApp() {
 
                   {advisory.content.key_assets_at_risk?.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase mb-1.5">At Risk</h4>
+                      <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">At Risk</h4>
                       <div className="flex flex-wrap gap-1.5">
                         {advisory.content.key_assets_at_risk.map((asset: any, i: number) => (
                           <span key={i} className="bg-slate-800 border border-slate-700 px-2 py-1 rounded text-[10px] text-slate-300">
@@ -254,6 +253,7 @@ export default function ForecasterApp() {
       {/* MAP AREA */}
       <div className="flex-1 relative">
         <Map
+          mapLib={maplibregl}
           initialViewState={{
             longitude: 88.3,
             latitude: 22.3,

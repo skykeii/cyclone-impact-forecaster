@@ -71,7 +71,7 @@ def verify_facts(json_output: Dict[str, Any], context: Dict[str, Any]) -> Tuple[
 
 
 async def generate_advisory_for_district(event_id: str, district_id: str, lang: str = "en") -> Dict[str, Any]:
-    api_key = os.environ.get("GEMINI_API_KEY", "DUMMY_KEY")
+    api_key = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip()
     client = genai.Client(api_key=api_key)
     
     context = get_district_context(event_id, district_id)
@@ -150,14 +150,15 @@ Instructions:
             verified = True
             break
             
-    # Save to DB
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute(
-        "INSERT OR REPLACE INTO advisories (district_id, event_id, lang, json_content, verified) VALUES (?, ?, ?, ?, ?)",
-        (district_id, event_id, lang, json.dumps(final_output), int(verified))
-    )
-    conn.commit()
-    conn.close()
+    # Save to DB only if successful advisory
+    if final_output and "Fallback summary due to API error" not in final_output.get("threat_summary", ""):
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            "INSERT OR REPLACE INTO advisories (district_id, event_id, lang, json_content, verified) VALUES (?, ?, ?, ?, ?)",
+            (district_id, event_id, lang, json.dumps(final_output), int(verified))
+        )
+        conn.commit()
+        conn.close()
     
     return {
         "content": final_output,

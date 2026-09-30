@@ -84,6 +84,7 @@ def init_db():
     """Create all tables if they don't exist."""
     conn = get_connection()
     conn.executescript(SCHEMA_SQL)
+    conn.execute("DELETE FROM advisories WHERE json_content LIKE '%Fallback summary due to API error%'")
     conn.commit()
     conn.close()
     print(f"[DB] Initialized database at {DB_PATH}")
